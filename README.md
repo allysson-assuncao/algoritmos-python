@@ -12,5 +12,5 @@ listas/
 ## Como executar
 
 ```bash
-python listas/lista_01/pares_ordenados.py
+python listas/lista_01/Ex1.py
 ```
