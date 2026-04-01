@@ -1,5 +1,6 @@
 import sys
 import math
+import numpy as np
 
 def play_game():
     number = 23
@@ -100,8 +101,13 @@ def fib(n):
 
     return  result
 
+def teste_numpy():
+    a = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
+    print(a[:, ::-1])
+
 if __name__ == '__main__':
+    teste_numpy()
     # matriz_comprehension()
-    for x in sys.path:
-        print(x)
+    # for x in sys.path:
+        # print(x)
 
