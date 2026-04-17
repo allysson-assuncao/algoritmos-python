@@ -10,7 +10,6 @@ def resolver_mochila_construtiva():
     ]
     capacidade_restante = 50
 
-    # Guardamos a ordem original dos nomes para montar a string binária no final
     nomes_originais = [item['nome'] for item in itens]
 
     itens_selecionados = []
@@ -21,7 +20,6 @@ def resolver_mochila_construtiva():
     print("--- Processo de Construção Passo a Passo ---")
     passo = 1
 
-    # Loop de construção da solução
     while True:
         # 1. Filtrar a lista de restrições: pegar apenas os itens que ainda cabem na mochila
         candidatos_validos = [item for item in itens_disponiveis if item['peso'] <= capacidade_restante]
@@ -31,7 +29,6 @@ def resolver_mochila_construtiva():
             break
 
         # 3. Aplicar a função heurística: Selecionar o item com a melhor razão Valor/Peso
-        # Em caso de empate na divisão, o critério de desempate é o item de maior valor
         melhor_item = max(candidatos_validos, key=lambda x: (x['valor'] / x['peso'], x['valor']))
 
         # 4. Atualizar os estados (adicionar na mochila)
@@ -47,10 +44,8 @@ def resolver_mochila_construtiva():
         itens_disponiveis.remove(melhor_item)
         passo += 1
 
-    # Montar a representação binária baseada na ordem original da lista
     mochila_binaria = "".join(["1" if nome in itens_selecionados else "0" for nome in nomes_originais])
 
-    # Exibir resultados finais
     print("\n--- Resultado Final ---")
     print(f"Itens selecionados     : {', '.join(itens_selecionados)}")
     print(f"Organização da mochila : {mochila_binaria}")
