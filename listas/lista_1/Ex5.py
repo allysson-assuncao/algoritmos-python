@@ -1,23 +1,29 @@
+from math import hypot
+from pathlib import Path
+
+
 def le_arq_tsp(arquivo):
-    grafo = {}
+    coordenadas = {}
+
     with open(arquivo, "r") as f:
-        linhas = f.readlines()
+        for linha in f:
+            # O arquivo traz: id_da_cidade x y
+            partes = linha.strip().split()
+            if len(partes) == 3:
+                cidade = int(partes[0])
+                x = float(partes[1])
+                y = float(partes[2])
+                coordenadas[cidade] = (x, y)
 
-    for linha in linhas:
-        # Divide a linha pelos espaços em branco
-        partes = linha.strip().split()
-        if len(partes) == 3:
-            cidade_de = int(partes[0])
-            cidade_ate = int(partes[1])
-            distancia = float(partes[2])
+    # Constrói um grafo completo com distâncias euclidianas entre todas as cidades.
+    grafo = {cidade: {} for cidade in coordenadas}
+    cidades = list(coordenadas.keys())
 
-            # Inicializa os dicionários das cidades caso ainda não existam
-            if cidade_de not in grafo:
-                grafo[cidade_de] = {}
-            if cidade_ate not in grafo:
-                grafo[cidade_ate] = {}
-
-            # Grava a distância nas duas direções (grafo simétrico)
+    for i, cidade_de in enumerate(cidades):
+        x1, y1 = coordenadas[cidade_de]
+        for cidade_ate in cidades[i + 1:]:
+            x2, y2 = coordenadas[cidade_ate]
+            distancia = hypot(x2 - x1, y2 - y1)
             grafo[cidade_de][cidade_ate] = distancia
             grafo[cidade_ate][cidade_de] = distancia
 
@@ -69,7 +75,7 @@ def heuristica_vizinho_mais_proximo(grafo, cidade_inicial):
     return rota, distancia_total
 
 if __name__ == "__main__":
-    nome_do_arquivo = "cidades50.txt"
+    nome_do_arquivo = Path(__file__).with_name("cidades50.txt")
 
     try:
         grafo_tsp = le_arq_tsp(nome_do_arquivo)

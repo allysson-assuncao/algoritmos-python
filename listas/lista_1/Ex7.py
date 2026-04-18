@@ -11,11 +11,9 @@ def gerar_permutacoes():
     permutacoes = list(itertools.permutations(elementos))
 
     print(f"Total de permutações possíveis: {len(permutacoes)}")
-    print("Exibindo as 15 primeiras possibilidades:")
+    print("Exibindo todas as possibilidades:")
 
-    for i, p in enumerate(permutacoes[:15]):
+    for i, p in enumerate(permutacoes[:]):
         print(f"{i+1:03d}. {p}")
-
-    print("...") # Indica que a lista continua
 
 gerar_permutacoes()
