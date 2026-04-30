@@ -20,7 +20,7 @@ def problema_3_rotas():
         print("Entrada inválida. Usando a cidade 0 (A) como padrão.")
         cidade_atual = 0
     else:
-        cidade_atual = int(entrada_origem) # Casting para inteiro
+        cidade_atual = int(entrada_origem)
 
     cidade_origem = cidade_atual
 

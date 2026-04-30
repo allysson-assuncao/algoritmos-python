@@ -7,11 +7,6 @@ def lancamento_dados():
     entrada = input("Digite o número de dados a serem lançados (ex: 2): ")
     n_dados = int(entrada) # Convertendo string para inteiro
 
-    # Validação simples usando condicional
-    if n_dados < 1:
-        print("Você precisa lançar pelo menos 1 dado!")
-        return
-
     # 2. Estrutura de Dados: Lista de Listas (Matriz)
     # Começamos com as 6 possibilidades do primeiro dado
     combinacoes = [[1], [2], [3], [4], [5], [6]]

@@ -39,14 +39,11 @@ def problema_2_mochila():
 
             # Operação de troca de elementos na lista (Swap)
             if deve_trocar:
-                # Armazena o atual em uma variável temporária
                 temp = itens[j]
-                # Sobrescreve o atual com o próximo
                 itens[j] = itens[j+1]
-                # Coloca o que estava no atual (temp) na posição do próximo
                 itens[j+1] = temp
 
-    # Exibindo a lista após nossa ordenação manual
+    # Exibindo a lista após ordenação manual
     print("\nItens disponíveis (Ordenados por Maior Valor -> Menor Peso):")
     for item in itens:
         print(f"- {item['nome']}: {item['valor']} | {item['peso']}kg")

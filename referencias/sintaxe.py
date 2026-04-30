@@ -75,10 +75,8 @@ dobro = lambda x: x * 2
 
 # 8. ESTRUTURAS DE DADOS
 
-# ---------------------------------------------------------
 # A. LISTAS (List - Mutáveis, ordenadas, aceitam duplicatas)
 # Atuam como vetores (arrays dinâmicos) em Python.
-# ---------------------------------------------------------
 frutas = ["maçã", "banana", "cereja"]
 frutas.append("uva")        # Adiciona ao final
 frutas.insert(1, "manga")   # Insere no índice 1
@@ -128,7 +126,7 @@ itens = usuario.items()           # Retorna pares (chave, valor)
 email = usuario.get("email", "Sem email") # Tenta pegar, se não achar retorna "Sem email"
 
 # E. CONJUNTOS (Set - Não ordenados, valores ÚNICOS)
-# Muito eficientes para verificar pertinência e remover duplicatas.
+# Muito eficientes para verificar pertencimento e remover duplicatas.
 numeros_set = {1, 2, 3, 3, 4} # Fica apenas {1, 2, 3, 4}
 numeros_set.add(5)
 numeros_set.remove(2) # Gera erro se não existir. Use .discard(2) para evitar erro.
