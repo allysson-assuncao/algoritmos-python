@@ -58,6 +58,7 @@ def fs(s):
 
     return custo
 
+
 # Define aqui a função para resolver o Exercícios 2:
 def constroiAleatorio(n, matrizDist, fs):
     # n: numero de cidades:  de 0..n
@@ -148,3 +149,35 @@ def multistart(fs, constroiAleatorio, descidaRandomica, s, criterioParada=10000)
             iteracoes_sem_melhora += 1
 
     return melhor_s_global
+
+
+# Pega o número total de cidades a partir do vetor gerado na leitura do arquivo
+n_cidades = len(cidades)
+
+print("--- 1. Teste da Heurística Construtiva Aleatória ---")
+solucao_inicial = constroiAleatorio(n_cidades, dist, fs)
+custo_inicial = fs(solucao_inicial)
+print(f"Custo da Rota Inicial Aleatória: {custo_inicial:.2f}")
+print(f"Amostra da Rota: {solucao_inicial[:10]}... (exibindo as 10 primeiras cidades)\n")
+
+print("--- 2. Teste da Descida Aleatória (Refinamento Local) ---")
+
+solucao_refinada = descidaRandomica(fs, NS_swap_aleatorio, solucao_inicial, IterMax=1000)
+custo_refinado = fs(solucao_refinada)
+print(f"Custo após Descida Aleatória: {custo_refinado:.2f}")
+print(f"Melhoria no custo: {custo_inicial - custo_refinado:.2f} (redução da distância)\n")
+
+print("--- 3. Teste da Metaheurística Multistart ---")
+print("Executando Multistart... (aguarde, pode levar alguns segundos)")
+
+# Marcando o tempo de execução para a apresentação
+inicio_tempo = time.time()
+
+solucao_multistart = multistart(fs, constroiAleatorio, descidaRandomica, cidades, criterioParada=500)
+
+fim_tempo = time.time()
+custo_multistart = fs(solucao_multistart)
+
+print(f"\nCusto final com Multistart: {custo_multistart:.2f}")
+print(f"Diferença do primeiro custo aleatório para o Multistart: {custo_inicial - custo_multistart:.2f}")
+print(f"Tempo de execução do algoritmo: {fim_tempo - inicio_tempo:.2f} segundos")
