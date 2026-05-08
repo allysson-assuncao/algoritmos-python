@@ -75,8 +75,6 @@ def constroiAleatorio(n, matrizDist, fs):
 
 # Função para obter uma solução vizinha de s, da seguinte maneira: sorteie
 # aleatoriamente duas posições de s e faça a troca
-# Função para obter uma solução vizinha de s, da seguinte maneira: sorteie
-# aleatoriamente duas posições de s e faça a troca
 def NS_swap_aleatorio(s, n):
     # s: a lista ou array de elementos
     # n: o número de elementos de s
@@ -131,8 +129,6 @@ def multistart(fs, constroiAleatorio, descidaRandomica, s, criterioParada=10000)
     melhor_custo_global = float('inf')
     iteracoes_sem_melhora = 0
 
-    # Assumindo que a matriz 'dist' está disponível no escopo global
-    # para passar para a função construtiva
     global dist
 
     while iteracoes_sem_melhora < criterioParada:
@@ -152,7 +148,3 @@ def multistart(fs, constroiAleatorio, descidaRandomica, s, criterioParada=10000)
             iteracoes_sem_melhora += 1
 
     return melhor_s_global
-
-
-def leInt(msg):
-    return int(input(msg))
