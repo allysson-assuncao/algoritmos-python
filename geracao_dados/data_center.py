@@ -3,6 +3,7 @@ import numpy as np
 import random
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 
 
 def gerar_dados_datacenter():
@@ -18,6 +19,7 @@ def gerar_dados_datacenter():
     # ==========================================
     horas_do_dia = datas_horarias.hour
     meses_do_ano = datas_horarias.month
+    dias_da_semana = datas_horarias.weekday  # 0=Segunda, ..., 6=Domingo
 
     # Clima (Sazonalidade e ciclo diário)
     temp_base = 22
@@ -27,10 +29,14 @@ def gerar_dados_datacenter():
     ruido_temp = np.random.normal(0, 1, len(datas_horarias))
     temperatura_externa = temp_base + sazonalidade_mes + ciclo_diario + ruido_temp
 
-    # Ociosidade realista
-    uso_cpu_base = 35 + 45 * np.exp(-0.5 * ((horas_do_dia - 14) / 5) ** 2)
-    uso_cpu = uso_cpu_base + np.random.normal(0, 5, len(datas_horarias))
-    uso_cpu = np.clip(uso_cpu, 15, 90)
+    # MODIFICAÇÃO: Sazonalidade Semanal no Uso de CPU (Maior Sexta, Sábado e Domingo)
+    multiplicador_semana = np.where(dias_da_semana == 4, 1.15,  # Sexta +15%
+                                    np.where(dias_da_semana == 5, 1.25,  # Sábado +25%
+                                             np.where(dias_da_semana == 6, 1.20,  # Domingo +20%
+                                                      1.0)))  # Segunda a Quinta normal
+
+    uso_cpu_base = (35 + 45 * np.exp(-0.5 * ((horas_do_dia - 14) / 5) ** 2)) * multiplicador_semana
+    uso_cpu = np.clip(uso_cpu_base + np.random.normal(0, 5, len(datas_horarias)), 15, 95)
 
     qtd_servidores = 500
     consumo_ti_base = 150
@@ -59,40 +65,34 @@ def gerar_dados_datacenter():
     })
 
     # ==========================================
-    # TABELA 3: INVENTÁRIO, CUSTO E PERFORMANCE (500 linhas)
+    # TABELA 3: INVENTÁRIO E PERFORMANCE (500 linhas)
     # ==========================================
     ids_servidores = [f"SRV-{str(i).zfill(4)}" for i in range(1, 501)]
     categorias = random.choices(['De Ponta (Bleeding Edge)', 'Consolidado (Geração Estável)'], weights=[0.6, 0.4],
                                 k=500)
 
-    meses_uso = []
-    falhas = []
-    reposicoes = []
-    vida_util = []
-    custo_aquisicao = []
-    custo_manutencao = []
-    performance = []
+    meses_uso, falhas, reposicoes, vida_util, custo_aquisicao, custo_manutencao, performance = [], [], [], [], [], [], []
 
     for cat in categorias:
-        mes_atual = random.randint(2, 12)
-        meses_uso.append(mes_atual)
-
+        meses_uso.append(random.randint(2, 12))
         if cat == 'De Ponta (Bleeding Edge)':
             falhas_qtd = np.random.poisson(lam=1.8)
             falhas.append(falhas_qtd)
-            reposicoes.append(max(0, falhas_qtd - 1))  # Algumas falhas exigem troca de peça
+            reposicoes.append(max(0, falhas_qtd - 1))
             vida_util.append(random.randint(36, 48))
             custo_aquisicao.append(random.uniform(45000, 55000))
             custo_manutencao.append(falhas_qtd * random.uniform(800, 1500))
-            performance.append(random.uniform(85, 100))  # Score de processamento alto
-        else:  # Consolidado
+            # MODIFICAÇÃO: Unidade clara de performance (TeraFLOPS)
+            performance.append(random.uniform(95, 105))  # Alta performance bruta
+        else:
             falhas_qtd = np.random.poisson(lam=0.8)
             falhas.append(falhas_qtd)
             reposicoes.append(0 if falhas_qtd == 0 else random.choices([0, 1], weights=[0.8, 0.2])[0])
             vida_util.append(random.randint(48, 60))
             custo_aquisicao.append(random.uniform(25000, 32000))
             custo_manutencao.append(falhas_qtd * random.uniform(400, 800))
-            performance.append(random.uniform(70, 85))  # Score um pouco menor, mas estável
+            # Performance ~18-20% menor, mas muito mais eficiente em custo
+            performance.append(random.uniform(75, 85))
 
     custos_totais = np.array(custo_aquisicao) + np.array(custo_manutencao)
 
@@ -106,13 +106,13 @@ def gerar_dados_datacenter():
         'Custo_Aquisicao_R$': np.round(custo_aquisicao, 2),
         'Custo_Manutencao_R$': np.round(custo_manutencao, 2),
         'Custo_Total_R$': np.round(custos_totais, 2),
-        'Performance_Media_Score': np.round(performance, 1)
+        'Performance_Media_TFLOPS': np.round(performance, 1)
     })
 
-    # Nova Métrica Crucial: Custo por Unidade de Performance Anualizada
+    # Cálculo de Custo por Unidade de Performance (R$ / TeraFLOP / Ano)
     df_inventario['Custo_Performance_Anual_R$'] = np.round(
         (df_inventario['Custo_Total_R$'] / (df_inventario['Vida_Util_Projetada_Meses'] / 12)) / df_inventario[
-            'Performance_Media_Score'], 2
+            'Performance_Media_TFLOPS'], 2
     )
 
     # ==========================================
@@ -124,7 +124,6 @@ def gerar_dados_datacenter():
     fator_co2_kwh = 0.00008
     co2_energia = df_energia_semana['Consumo_Total_kWh'] * fator_co2_kwh
     vazamento_hfc = df_energia_semana['Temp_Externa_C'] / 1000
-
     custo_compensacao = co2_energia.values * 150
 
     df_emissoes = pd.DataFrame({
@@ -140,21 +139,19 @@ def gerar_dados_datacenter():
     # ==========================================
     meses_churn = pd.date_range(start=data_inicio, periods=12, freq='ME')
 
-    pub_peq = 120
-    pub_med = 20
-    priv_peq = 200
-    priv_med = 45
-
+    pub_peq, pub_med, priv_peq, priv_med = 120, 20, 200, 45
     dados_churn = []
 
     for i in range(12):
         pub_peq += random.randint(2, 4)
-        pub_med -= random.choices([0, 1, 2], weights=[0.2, 0.6, 0.2])[0]
-        priv_med -= random.choices([2, 3], weights=[0.6, 0.4])[0]
+        pub_med -= random.choices([0, 1], weights=[0.6, 0.4])[0]  # Queda suavizada
+        # MODIFICAÇÃO: Queda de clientes privados médios amenizada
+        priv_med -= random.choices([1, 2], weights=[0.7, 0.3])[0]
         priv_peq -= random.randint(1, 3)
 
         receita_total = (pub_peq * 2000) + (pub_med * 15000) + (priv_peq * 2000) + (max(0, priv_med) * 15000)
-        lucro_estimado = receita_total - 700000
+        # MODIFICAÇÃO: Lucro menos desesperador. Opex ajustado para 650k
+        lucro_estimado = receita_total - 650000
 
         dados_churn.append({
             'Mes': meses_churn[i].strftime('%Y-%m'),
@@ -198,49 +195,71 @@ def gerar_dados_datacenter():
     plt.savefig('grafico_1_PUE_vs_Temp.png')
     plt.close()
 
-    # Gráfico 2: Ociosidade (Legendas arrumadas e eixo com folga)
-    df_semana = df_ociosidade.iloc[1000:1168]
-    plt.figure(figsize=(10, 6))  # Área ligeiramente maior
-    plt.fill_between(df_semana['Data_Hora'], df_semana['Uso_Medio_CPU_%'], color='skyblue', alpha=0.8,
-                     label='Uso de CPU')
-    plt.plot(df_semana['Data_Hora'], [100] * len(df_semana), 'r-', alpha=0.7, label='Capacidade Energética Máxima')
-    plt.title('Ociosidade: Margem de Otimização fora do Horário Comercial')
-    plt.ylim(0, 115)  # Folga no topo para não cruzar a linha de 100% com o título/legenda
-    plt.legend(loc='upper right')
+    # MODIFICAÇÃO: Gráfico 2 filtrado para 1 semana exata de Dezembro 2025
+    # 08/12/2025 (Segunda-feira) a 14/12/2025 (Domingo)
+    mask_semana = (df_ociosidade['Data_Hora'] >= '2025-12-08') & (df_ociosidade['Data_Hora'] <= '2025-12-14 23:59:59')
+    df_semana = df_ociosidade.loc[mask_semana]
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.fill_between(df_semana['Data_Hora'], df_semana['Uso_Medio_CPU_%'], color='skyblue', alpha=0.8,
+                    label='Uso Médio de CPU (%)')
+    ax.plot(df_semana['Data_Hora'], [100] * len(df_semana), 'r-', alpha=0.7,
+            label='Capacidade Energética (100% Servidores Ligados)')
+
+    ax.set_title('Ociosidade: Margem de Otimização (Semana de 08 a 14 Dez/2025)')
+    ax.set_ylim(0, 115)
+    ax.legend(loc='upper right')
+
+    # Formatando o eixo X para mostrar os dias da semana claramente
+    ax.xaxis.set_major_locator(mdates.DayLocator())
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%a\n%d/%m'))
     plt.tight_layout()
-    plt.savefig('grafico_2_Ociosidade.png')
+    plt.savefig('grafico_2_Ociosidade_Semanal.png')
     plt.close()
 
-    # Gráfico 3: Custo-Benefício do Hardware (Novo Gráfico focado na Tabela 3)
-    plt.figure(figsize=(9, 6))
+    # MODIFICAÇÃO: Gráfico 3 com unidade e texto explicativo
+    plt.figure(figsize=(10, 6))
     custo_beneficio_medio = df_inventario.groupby('Categoria')['Custo_Performance_Anual_R$'].mean()
-    custo_beneficio_medio.plot(kind='bar', color=['#4CAF50', '#F44336'], edgecolor='black')
+    ax = custo_beneficio_medio.plot(kind='bar', color=['#4CAF50', '#F44336'], edgecolor='black')
+
     plt.title('Custo Real por Performance Anualizada (Menor é Melhor)')
-    plt.ylabel('R$ por Unidade de Score de Performance ao Ano')
+    plt.ylabel('Custo (R$) / TeraFLOPS / Ano')
     plt.xticks(rotation=0)
-    plt.tight_layout()
+
+    # Adicionando o box de texto explicativo
+    texto_explicativo = (
+        "Nota: Servidores Consolidados entregam em média ~18% menos TeraFLOPS brutos,\n"
+        "porém o seu TCO (Custo Total de Propriedade) supera largamente os hardwares de\n"
+        "ponta devido à drástica redução em consumo térmico, falhas e manutenção."
+    )
+    plt.figtext(0.5, -0.05, texto_explicativo, wrap=True, horizontalalignment='center', fontsize=9,
+                bbox={'facecolor': 'white', 'alpha': 0.8, 'pad': 5, 'edgecolor': 'lightgrey'})
+
+    plt.tight_layout(rect=[0, 0.05, 1, 1])  # Dá espaço para o texto embaixo
     plt.savefig('grafico_3_ROI_Hardware.png')
     plt.close()
 
-    # Gráfico 4: Custos de Emissões vs Lucro
+    # MODIFICAÇÃO: Gráfico 4 sem legenda interna e com eixo Y do lucro começando em 0
     df_emissoes_mensal = df_emissoes.groupby('Mes')['Custo_Compensacao_R$'].sum().reset_index()
     fig, ax1 = plt.subplots(figsize=(10, 5))
     ax2 = ax1.twinx()
 
-    ax1.bar(df_emissoes_mensal['Mes'], df_emissoes_mensal['Custo_Compensacao_R$'], color='salmon', alpha=0.7,
-            label='Custo de Compensação CO2')
-    ax2.plot(df_churn['Mes'], df_churn['Lucro_Estimado_R$'], color='darkblue', marker='o', linewidth=2,
-             label='Lucro Estimado')
+    ax1.bar(df_emissoes_mensal['Mes'], df_emissoes_mensal['Custo_Compensacao_R$'], color='salmon', alpha=0.7)
+    ax2.plot(df_churn['Mes'], df_churn['Lucro_Estimado_R$'], color='darkblue', marker='o', linewidth=2)
 
-    ax1.set_ylabel('Custo para Anular Emissões (R$)', color='salmon')
-    ax2.set_ylabel('Lucro Estimado (R$)', color='darkblue')
-    plt.title('O Impacto da Poluição: Queda de Lucros vs. Custo ESG')
-    fig.legend(loc='center right', bbox_to_anchor=(0.9, 0.5))
+    ax1.set_ylabel('Custo para Anular Emissões (R$)', color='salmon', fontweight='bold')
+    ax2.set_ylabel('Lucro Estimado (R$)', color='darkblue', fontweight='bold')
+
+    # Forçando o eixo do lucro a começar em 0 para honestidade gráfica
+    ax2.set_ylim(bottom=0)
+
+    plt.title('O Impacto da Poluição: Margem de Lucro vs. Custos de Compensação ESG')
     fig.autofmt_xdate(rotation=45)
+    plt.tight_layout()
     plt.savefig('grafico_4_Custos_Emissoes_vs_Lucro.png')
     plt.close()
 
-    # Gráfico 5: Movimentação de Clientes (Eixo Y honesto partindo do 0)
+    # Gráfico 5: Movimentação de Clientes (Eixo Y honesto)
     plt.figure(figsize=(10, 5))
     plt.plot(df_churn['Mes'], df_churn['Clientes_Priv_Medios'], marker='o', color='red',
              label='Privado Médio (Queda ESG)')
@@ -249,8 +268,8 @@ def gerar_dados_datacenter():
     plt.plot(df_churn['Mes'], df_churn['Clientes_Pub_Pequenos'], marker='^', color='green',
              label='Público Pequeno (Crescimento)')
     plt.title('Evolução da Carteira: Fuga do Setor Médio')
-    plt.ylim(bottom=0)  # Eixo Y partindo do zero (Honestidade nos dados)
-    plt.legend(loc='upper right', bbox_to_anchor=(1, 0.8))  # Ajustado para não sobrepor as linhas
+    plt.ylim(bottom=0)
+    plt.legend(loc='upper right', bbox_to_anchor=(1, 0.8))
     plt.xticks(rotation=45)
     plt.tight_layout()
     plt.savefig('grafico_5_Movimentacao_Clientes.png')
